@@ -16,24 +16,31 @@ public class PlayerController : MonoBehaviour {
 	public Transform shotSpawn;
 	public Boundary boundary;
 
-	//private Quaternion calibrationQuaternion;
 	public SimpleTouchPad touchPad;
 	public SimpleTouchAreaButton touchAreaButton;
+
+	//private Quaternion calibrationQuaternion;
 
 	void Start () {
 		rb = GetComponent<Rigidbody>();
 		audioSource = GetComponent<AudioSource>();
 	
-		//Calibrate for mobile accelerometer
 		//CalibrateAccelerometer();
 	}
 
 	void Update () {
 
-		//Original shooting guard
-		//if (Input.GetButton("Fire1") && Time.time > nextFire)
-		if (touchAreaButton.CanFire() && Time.time > nextFire)
-		{
+		bool readyToShoot;
+
+		#if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
+			readyToShoot = Input.GetButton("Fire1") && Time.time > nextFire;
+		#endif
+
+		#if UNITY_ANDROID || UNITY_IOS && !UNITY_EDITOR
+			readyToShoot = touchAreaButton.CanFire() && Time.time > nextFire;
+		#endif
+
+		if (readyToShoot) {
 			nextFire = Time.time + fireRate;
 			Instantiate(shot, shotSpawn.position, shotSpawn.rotation);
 			audioSource.Play();
@@ -41,19 +48,16 @@ public class PlayerController : MonoBehaviour {
 	}
 
 	void FixedUpdate () {
-		//Original movement
-		//float moveHorizontal = Input.GetAxis ("Horizontal");
-		//float moveVertical = Input.GetAxis ("Vertical");
-		//Vector3 movement = new Vector3 (moveHorizontal, 0.0f, moveVertical);
 
-		//Mobile accelerometer movement
-		//Vector3 accelerationRaw = Input.acceleration;
-		//Vector3 acceleration = FixAcceleration(accelerationRaw);
-		//Vector3 movement = new Vector3 (acceleration.x, 0.0f, acceleration.y);
+		Vector3 movement;
 
-		//Mobile touchpad movement
-		Vector2 direction = touchPad.GetDirection();
-		Vector3 movement = new Vector3 (direction.x, 0.0f, direction.y);
+		#if UNITY_EDITOR || UNITY_STANDALONE || UNITY_WEBGL
+			movement = GetKeyboardMovement();
+		#endif
+
+		#if UNITY_ANDROID || UNITY_IOS && !UNITY_EDITOR
+			movement = GetTouchpadMovement();
+		#endif
 
 		rb.velocity = movement * speed;
 
@@ -64,7 +68,22 @@ public class PlayerController : MonoBehaviour {
 		rb.rotation = Quaternion.Euler(0.0f, 0.0f, rb.velocity.x * -tilt);
 	}
 
-	//Mobile accelerometer calibration
+	Vector3 GetKeyboardMovement() {
+		float moveHorizontal = Input.GetAxis ("Horizontal");
+		float moveVertical = Input.GetAxis ("Vertical");
+		return new Vector3(moveHorizontal, 0.0f, moveVertical);
+	}
+
+	Vector3 GetTouchpadMovement() {
+		Vector2 direction = touchPad.GetDirection();
+		return new Vector3(direction.x, 0.0f, direction.y);
+	}
+		
+	//Vector3 GetAccelerometerMovement() {
+		//Vector3 accelerationRaw = Input.acceleration;
+		//Vector3 acceleration = FixAcceleration(accelerationRaw);
+		//return new Vector3 (acceleration.x, 0.0f, acceleration.y);
+	//}
 
 	//void CalibrateAccelerometer() {
 		//Vector3 accelerationSnapshot = Input.acceleration;
